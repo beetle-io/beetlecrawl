@@ -15,6 +15,7 @@
 package beetlecrawl
 
 import (
+	"github.com/x-debug/beetlecrawl/selector"
 	"io"
 	"net/http"
 )
@@ -29,7 +30,8 @@ type (
 	//HttpResponse is the http response
 	HttpResponse struct {
 		*http.Response
-		req *HttpRequest
+		req    *HttpRequest
+		cssSel *selector.CssSelector
 	}
 )
 
@@ -49,6 +51,13 @@ func (br *HttpResponse) BodyString() (string, error) {
 	return string(bodyBytes), nil
 }
 
+func (br *HttpResponse) Css() *selector.CssSelector {
+	if br.cssSel == nil {
+		br.cssSel = selector.NewCssSelector(br.Body)
+	}
+	return br.cssSel
+}
+
 func newHttpResponse(nativeResp *http.Response, req *HttpRequest) *HttpResponse {
-	return &HttpResponse{nativeResp, req}
+	return &HttpResponse{nativeResp, req, nil}
 }
