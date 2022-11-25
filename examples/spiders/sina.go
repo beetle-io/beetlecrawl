@@ -34,9 +34,9 @@ func (ss *SinaSpider) Init() error {
 
 func (ss *SinaSpider) ParseList(resp *beetlecrawl.HttpResponse) (err error) {
 	log.Printf("parse list %s, http status code %d\n", ss.Name(), resp.StatusCode)
-	hrefs := resp.Css().QueryAll("div.more-layer ul li a")
+	hrefs := resp.Css().Query("div.more-layer ul li a")
 	for _, href := range hrefs {
-		log.Printf("href: %s\n", href.FindAttr("href"))
+		log.Printf("Label: %s\n", href.FirstChild.Data)
 	}
 	return err
 }

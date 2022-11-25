@@ -29,46 +29,55 @@ type (
 	SelNode struct {
 		*html.Node
 	}
+
+	SelNodes []*SelNode
 )
 
 func NewCssSelector(reader io.Reader) *CssSelector {
 	return &CssSelector{rawReader: reader}
 }
 
-func (cs *CssSelector) QueryAll(cssExpr string) []*SelNode {
+func (cs *CssSelector) Query(cssExpr string) SelNodes {
 	node, err := html.Parse(cs.rawReader)
 	if err != nil {
 		return []*SelNode{}
 	}
 
+	return newSelNode(node).Query(cssExpr)
+}
+
+func newSelNode(htmlNode *html.Node) *SelNode {
+	return &SelNode{Node: htmlNode}
+}
+
+//Query find the nodes by css expression
+func (sn *SelNode) Query(cssExpr string) SelNodes {
 	var selector cascadia.Sel
+	var err error
 	if selector, err = cascadia.Parse(cssExpr); err != nil {
 		return []*SelNode{}
 	}
-	return cs.toSelNodes(cascadia.QueryAll(node, selector))
+
+	htmlNodes := cascadia.QueryAll(sn.Node, selector)
+	nodes := make([]*SelNode, 0)
+	for _, node := range htmlNodes {
+		nodes = append(nodes, newSelNode(node))
+	}
+	return nodes
 }
 
-func (cs *CssSelector) Query(cssExpr string) *SelNode {
-	node, err := html.Parse(cs.rawReader)
-	if err != nil {
-		return &SelNode{node}
-	}
-
+func (sn *SelNode) QuerySingle(cssExpr string) *SelNode {
 	var selector cascadia.Sel
+	var err error
 	if selector, err = cascadia.Parse(cssExpr); err != nil {
-		return &SelNode{node}
+		return &SelNode{}
 	}
-	return &SelNode{cascadia.Query(node, selector)}
+
+	htmlNode := cascadia.Query(sn.Node, selector)
+	return newSelNode(htmlNode)
 }
 
-func (cs *CssSelector) toSelNodes(nodes []*html.Node) []*SelNode {
-	selNodes := make([]*SelNode, 0)
-	for _, node := range nodes {
-		selNodes = append(selNodes, &SelNode{node})
-	}
-	return selNodes
-}
-
+//FindAttr find the attribute value of the node
 func (sn *SelNode) FindAttr(name string) string {
 	for _, attr := range sn.Attr {
 		if attr.Key == name {
@@ -76,4 +85,18 @@ func (sn *SelNode) FindAttr(name string) string {
 		}
 	}
 	return ""
+}
+
+func (sns SelNodes) First() *SelNode {
+	if len(sns) == 0 {
+		return nil
+	}
+	return sns[0]
+}
+
+func (sns SelNodes) Last() *SelNode {
+	if len(sns) == 0 {
+		return nil
+	}
+	return sns[len(sns)-1]
 }
