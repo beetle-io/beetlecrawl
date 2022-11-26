@@ -19,7 +19,7 @@ import (
 	"testing"
 )
 
-var htmlContent = `
+var cssHtmlContent = `
 	<div class="more-layer">
 		<i class="ico ico-arrow"></i>
 		<ul class="clearfix">
@@ -30,8 +30,8 @@ var htmlContent = `
 	</div>
 `
 
-func TestCssSelector_QueryAll(t *testing.T) {
-	sel := NewCssSelector(strings.NewReader(htmlContent))
+func TestCssSelector_Query(t *testing.T) {
+	sel := NewCssSelector(strings.NewReader(cssHtmlContent))
 	nodes := sel.Query("div.more-layer ul li a")
 	for _, node := range nodes {
 		if node.FindAttr("href") != "//auto.sina.com.cn/" &&
@@ -42,8 +42,8 @@ func TestCssSelector_QueryAll(t *testing.T) {
 	}
 }
 
-func TestCssSelector_Query(t *testing.T) {
-	sel := NewCssSelector(strings.NewReader(htmlContent))
+func TestCssSelector_QuerySingle(t *testing.T) {
+	sel := NewCssSelector(strings.NewReader(cssHtmlContent))
 	node := sel.Query("div.more-layer ul li a").First()
 	if node == nil {
 		t.Error("first link is empty")
@@ -51,7 +51,7 @@ func TestCssSelector_Query(t *testing.T) {
 }
 
 func TestCssSelector_QueryClass(t *testing.T) {
-	sel := NewCssSelector(strings.NewReader(htmlContent))
+	sel := NewCssSelector(strings.NewReader(cssHtmlContent))
 	eduNode := sel.Query("div.more-layer ul li.edu").First()
 	if eduNode == nil {
 		t.Error("edu link is empty")
@@ -64,7 +64,7 @@ func TestCssSelector_QueryClass(t *testing.T) {
 }
 
 func TestCssSelector_QueryText(t *testing.T) {
-	sel := NewCssSelector(strings.NewReader(htmlContent))
+	sel := NewCssSelector(strings.NewReader(cssHtmlContent))
 	eduNode := sel.Query("div.more-layer ul li.edu").First()
 	if eduNode == nil {
 		t.Error("edu link is empty")

@@ -23,62 +23,53 @@ import (
 //CssSelector is the css selector
 type (
 	CssSelector struct {
-		rawReader io.Reader
-	}
-
-	SelNode struct {
 		*html.Node
 	}
 
-	SelNodes []*SelNode
+	CssSelectors []*CssSelector
 )
 
 func NewCssSelector(reader io.Reader) *CssSelector {
-	return &CssSelector{rawReader: reader}
-}
-
-func (cs *CssSelector) Query(cssExpr string) SelNodes {
-	node, err := html.Parse(cs.rawReader)
+	node, err := html.Parse(reader)
 	if err != nil {
-		return []*SelNode{}
+		return nil
 	}
-
-	return newSelNode(node).Query(cssExpr)
+	return newCssSelNode(node)
 }
 
-func newSelNode(htmlNode *html.Node) *SelNode {
-	return &SelNode{Node: htmlNode}
+func newCssSelNode(htmlNode *html.Node) *CssSelector {
+	return &CssSelector{Node: htmlNode}
 }
 
 //Query find the nodes by css expression
-func (sn *SelNode) Query(cssExpr string) SelNodes {
+func (sn *CssSelector) Query(cssExpr string) CssSelectors {
 	var selector cascadia.Sel
 	var err error
 	if selector, err = cascadia.Parse(cssExpr); err != nil {
-		return []*SelNode{}
+		return []*CssSelector{}
 	}
 
 	htmlNodes := cascadia.QueryAll(sn.Node, selector)
-	nodes := make([]*SelNode, 0)
+	nodes := make([]*CssSelector, 0)
 	for _, node := range htmlNodes {
-		nodes = append(nodes, newSelNode(node))
+		nodes = append(nodes, newCssSelNode(node))
 	}
 	return nodes
 }
 
-func (sn *SelNode) QuerySingle(cssExpr string) *SelNode {
+func (sn *CssSelector) QuerySingle(cssExpr string) *CssSelector {
 	var selector cascadia.Sel
 	var err error
 	if selector, err = cascadia.Parse(cssExpr); err != nil {
-		return &SelNode{}
+		return &CssSelector{}
 	}
 
 	htmlNode := cascadia.Query(sn.Node, selector)
-	return newSelNode(htmlNode)
+	return newCssSelNode(htmlNode)
 }
 
 //FindAttr find the attribute value of the node
-func (sn *SelNode) FindAttr(name string) string {
+func (sn *CssSelector) FindAttr(name string) string {
 	for _, attr := range sn.Attr {
 		if attr.Key == name {
 			return attr.Val
@@ -87,14 +78,14 @@ func (sn *SelNode) FindAttr(name string) string {
 	return ""
 }
 
-func (sns SelNodes) First() *SelNode {
+func (sns CssSelectors) First() *CssSelector {
 	if len(sns) == 0 {
 		return nil
 	}
 	return sns[0]
 }
 
-func (sns SelNodes) Last() *SelNode {
+func (sns CssSelectors) Last() *CssSelector {
 	if len(sns) == 0 {
 		return nil
 	}

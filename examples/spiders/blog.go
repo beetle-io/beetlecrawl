@@ -19,24 +19,22 @@ import (
 	"log"
 )
 
-type SinaSpider struct {
+type BlogSpider struct {
 	beetlecrawl.BaseSpider
 }
 
-func (ss *SinaSpider) Name() string {
-	return "sina_spider"
+func (bs *BlogSpider) Name() string {
+	return "blog_spider"
 }
 
-func (ss *SinaSpider) Init() error {
-	log.Printf("init %s\n", ss.Name())
-	return ss.YieldHttp(beetlecrawl.NewHttpRequest(beetlecrawl.GET, "https://sports.sina.com.cn/", ss.ParseList))
+func (bs *BlogSpider) Init() error {
+	return bs.YieldHttp(beetlecrawl.NewHttpRequest(beetlecrawl.GET, "https://chenxf.org/archives/222.html", bs.ParseDetail))
 }
 
-func (ss *SinaSpider) ParseList(resp *beetlecrawl.HttpResponse) (err error) {
-	log.Printf("parse list %s, http status code %d\n", ss.Name(), resp.StatusCode)
-	hrefs := resp.Css("div.more-layer ul li a")
-	for _, href := range hrefs {
-		log.Printf("Label: %s\n", href.FirstChild.Data)
-	}
-	return err
+func (bs *BlogSpider) ParseDetail(resp *beetlecrawl.HttpResponse) error {
+	title := resp.XPath("//*[@id=\"main\"]/article/h1/a").First().FirstChild.Data
+	author := resp.XPath("//*[@id=\"main\"]/article/ul/li[1]/a").First().FirstChild.Data
+	date := resp.XPath("//*[@id=\"main\"]/article/ul/li[2]/time").First().FirstChild.Data
+	log.Printf("title: %s, author: %s, date: %s", title, author, date)
+	return nil
 }

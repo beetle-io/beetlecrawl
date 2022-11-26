@@ -25,5 +25,8 @@ func main() {
 	if err := scheduler.AddSpider(&spiders.SinaSpider{}); err != nil {
 		log.Fatal(err)
 	}
+	if err := scheduler.AddSpider(&spiders.BlogSpider{}); err != nil {
+		log.Fatal(err)
+	}
 	log.Fatal(scheduler.Run())
 }

@@ -30,8 +30,9 @@ type (
 	//HttpResponse is the http response
 	HttpResponse struct {
 		*http.Response
-		req    *HttpRequest
-		cssSel *selector.CssSelector
+		req      *HttpRequest
+		cssSel   *selector.CssSelector
+		xpathSel *selector.XPathSelector
 	}
 )
 
@@ -51,13 +52,20 @@ func (br *HttpResponse) BodyString() (string, error) {
 	return string(bodyBytes), nil
 }
 
-func (br *HttpResponse) Css() *selector.CssSelector {
+func (br *HttpResponse) Css(expr string) selector.CssSelectors {
 	if br.cssSel == nil {
 		br.cssSel = selector.NewCssSelector(br.Body)
 	}
-	return br.cssSel
+	return br.cssSel.Query(expr)
+}
+
+func (br *HttpResponse) XPath(expr string) selector.XPathSelectors {
+	if br.xpathSel == nil {
+		br.xpathSel = selector.NewXPathSelector(br.Body)
+	}
+	return br.xpathSel.Query(expr)
 }
 
 func newHttpResponse(nativeResp *http.Response, req *HttpRequest) *HttpResponse {
-	return &HttpResponse{nativeResp, req, nil}
+	return &HttpResponse{nativeResp, req, nil, nil}
 }
