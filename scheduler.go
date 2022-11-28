@@ -39,16 +39,17 @@ type (
 		httpDownloaders []*httpDownloader
 		userHttpReqs    chan *HttpRequest
 		//TODO atomic
-		countOfUserHttpReqs int
-		downloadHttpReqs    chan *HttpResponse
+		countOfUserHttpReqs  int
+		downloadSuccessResps chan *HttpResponse
+		downloadFailReqs     chan *HttpRequest
 	}
 )
 
-func NewYieldScheduler() *YieldScheduler {
+func NewYieldScheduler(appConf *AppConfig) *YieldScheduler {
 	downloaders := make([]*httpDownloader, 0)
 	for i := 0; i < CountOfDownloader; i++ {
 		//TODO export to user
-		downloader := newHttpDownloader()
+		downloader := newHttpDownloader(&appConf.Downloader)
 		if err := downloader.Init(); err != nil {
 			log.Printf("init downloader error, %v", err)
 			continue
@@ -57,10 +58,11 @@ func NewYieldScheduler() *YieldScheduler {
 	}
 
 	return &YieldScheduler{
-		httpDownloaders:  downloaders,
-		spiders:          make([]Spider, 0),
-		userHttpReqs:     make(chan *HttpRequest, CountOfUserRequests),
-		downloadHttpReqs: make(chan *HttpResponse),
+		httpDownloaders:      downloaders,
+		spiders:              make([]Spider, 0),
+		userHttpReqs:         make(chan *HttpRequest, CountOfUserRequests),
+		downloadSuccessResps: make(chan *HttpResponse),
+		downloadFailReqs:     make(chan *HttpRequest),
 	}
 }
 
@@ -90,20 +92,33 @@ func (ys *YieldScheduler) Run() error {
 	for {
 		select {
 		case req := <-ys.userHttpReqs:
-			log.Printf("get user req %v", req)
-			req.respCh = ys.downloadHttpReqs
+			req.successRespCh = ys.downloadSuccessResps
+			req.failReqCh = ys.downloadFailReqs
 			//TODO downloader select
 			_ = ys.httpDownloaders[0].DownloadAsync(req)
-		case resp := <-ys.downloadHttpReqs:
-			go func() {
+		case successResp := <-ys.downloadSuccessResps:
+			go func(resp *HttpResponse) {
 				//TODO defer the panic on the spider
 
+				if resp.Body != nil {
+					defer resp.Body.Close()
+				}
 				if err := resp.req.respCb(resp); err != nil {
 					log.Printf("Spider callback error, %v", err)
 				}
-
-				defer resp.Body.Close()
-			}()
+			}(successResp)
+		case failReq := <-ys.downloadFailReqs:
+			log.Printf("Download fail after retry %d times \n", failReq.retryTimes)
+			if failReq.failCb != nil {
+				go func(req *HttpRequest) {
+					if err := req.failCb(req, req.errs); err != nil {
+						log.Printf("spider callback failCb error, %v", err)
+					}
+				}(failReq)
+			} else {
+				//TODO handle default error
+				log.Printf("spider default fail callback, download response: %v", failReq)
+			}
 		}
 	}
 }

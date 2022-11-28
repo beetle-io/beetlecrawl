@@ -1,0 +1,2 @@
+downloader:
+  max_retry: 3

@@ -25,15 +25,26 @@ const (
 )
 
 type (
+	HttpFailFunc func(errReq *HttpRequest, errors []error) error
+
 	Request interface {
+		//URL returns the URL of the request
 		URL() string
+
+		//SetOnFail sets the callback function to be called when the request fails
+		SetOnFail(failFunc HttpFailFunc)
 	}
 
 	//HttpRequest is a wrapper around http.Request, user send this to scheduler for fetching the web page
 	HttpRequest struct {
 		*http.Request
-		respCb HttpResponseFunc
-		respCh chan *HttpResponse
+		respCb        HttpResponseFunc
+		failCb        HttpFailFunc
+		successRespCh chan *HttpResponse
+		failReqCh     chan *HttpRequest
+		//downloader will try download the page for maxRetry times, add all errors to this field
+		retryTimes int
+		errs       []error
 	}
 )
 
@@ -42,10 +53,25 @@ func NewHttpRequest(method string, url string, respFunc HttpResponseFunc) *HttpR
 	if err != nil {
 		log.Fatal(err)
 	}
-	httpReq := &HttpRequest{respCh: make(chan *HttpResponse), respCb: respFunc, Request: request}
+	httpReq := &HttpRequest{
+		successRespCh: make(chan *HttpResponse),
+		respCb:        respFunc,
+		failCb:        nil,
+		Request:       request,
+		errs:          make([]error, 0),
+		retryTimes:    0,
+	}
 	return httpReq
+}
+
+func (br *HttpRequest) SetOnFail(failFunc HttpFailFunc) {
+	br.failCb = failFunc
 }
 
 func (br *HttpRequest) URL() string {
 	return br.Request.URL.String()
+}
+
+func (br *HttpRequest) RetryTimes() int {
+	return br.retryTimes
 }

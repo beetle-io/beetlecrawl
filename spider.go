@@ -14,15 +14,22 @@
 
 package beetlecrawl
 
+//Spider contains user define crawl rules, and the spider will be executed by scheduler.
 type Spider interface {
+	//Init is called when spider starting.
 	Init() error
+
+	//Name is the unique name of spider.
 	Name() string
+
+	//YieldHttp is used to emit a http request.
 	YieldHttp(req Request) error
 	SetScheduler(scheduler Scheduler)
 }
 
 type BaseSpider struct {
-	sched Scheduler
+	sched  Scheduler
+	onFail HttpFailFunc
 }
 
 func (bs *BaseSpider) Init() error {
@@ -34,9 +41,14 @@ func (bs *BaseSpider) Name() string {
 }
 
 func (bs *BaseSpider) YieldHttp(req Request) error {
+	req.SetOnFail(bs.onFail)
 	return bs.sched.EmitHttpReq(req.(*HttpRequest))
 }
 
 func (bs *BaseSpider) SetScheduler(scheduler Scheduler) {
 	bs.sched = scheduler
+}
+
+func (bs *BaseSpider) SetupError(errCb HttpFailFunc) {
+	bs.onFail = errCb
 }

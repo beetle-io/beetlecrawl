@@ -29,6 +29,7 @@ func (ss *SinaSpider) Name() string {
 
 func (ss *SinaSpider) Init() error {
 	log.Printf("init %s\n", ss.Name())
+	ss.SetupError(ss.HandleErrors)
 	return ss.YieldHttp(beetlecrawl.NewHttpRequest(beetlecrawl.GET, "https://sports.sina.com.cn/", ss.ParseList))
 }
 
@@ -39,4 +40,12 @@ func (ss *SinaSpider) ParseList(resp *beetlecrawl.HttpResponse) (err error) {
 		log.Printf("Label: %s\n", href.FirstChild.Data)
 	}
 	return err
+}
+
+func (ss *SinaSpider) HandleErrors(errReq *beetlecrawl.HttpRequest, errs []error) error {
+	if len(errs) > 0 {
+		log.Println("current network is gone?")
+	}
+
+	return nil
 }

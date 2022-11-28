@@ -12,24 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package beetlecrawl
 
 import (
-	"github.com/x-debug/beetlecrawl"
-	"github.com/x-debug/beetlecrawl/examples/spiders"
-	"log"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
 )
 
-func main() {
-	appConf, err := beetlecrawl.LoadConfig("./examples/examples.yaml")
-	if err != nil {
-		log.Fatal(err)
+type (
+	AppConfig struct {
+		Downloader DownloaderConfig `yaml:"downloader"`
 	}
-	log.Printf("Downloader.MaxRetry: %d\n", appConf.Downloader.MaxRetry)
 
-	scheduler := beetlecrawl.NewYieldScheduler(appConf)
-	scheduler.AddSpider(&spiders.SinaSpider{})
-	scheduler.AddSpider(&spiders.BlogSpider{})
-	scheduler.AddSpider(&spiders.ErrorSpider{})
-	log.Fatal(scheduler.Run())
+	DownloaderConfig struct {
+		MaxRetry int `yaml:"max_retry"`
+	}
+)
+
+func LoadConfig(filePath string) (*AppConfig, error) {
+	confFile, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	var appConf AppConfig
+	if err = yaml.Unmarshal(confFile, &appConf); err != nil {
+		return nil, err
+	}
+	return &appConf, nil
 }

@@ -9,4 +9,5 @@ require (
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	golang.org/x/net v0.0.0-20211029224645-99673261e6eb // indirect
 	golang.org/x/text v0.3.6 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -16,6 +16,7 @@ package beetlecrawl
 
 import (
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -31,10 +32,13 @@ type (
 		downloadReqs chan *HttpRequest
 		closeCh      chan struct{}
 		httpClient   *http.Client
+		conf         *DownloaderConfig
+		failReqs     []*HttpRequest
+		failLock     sync.Mutex
 	}
 )
 
-func newHttpDownloader() *httpDownloader {
+func newHttpDownloader(conf *DownloaderConfig) *httpDownloader {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
 		IdleConnTimeout:    30 * time.Second,
@@ -45,6 +49,8 @@ func newHttpDownloader() *httpDownloader {
 		downloadReqs: make(chan *HttpRequest, defaultRequestQueueSize),
 		closeCh:      make(chan struct{}),
 		httpClient:   &http.Client{Transport: tr},
+		conf:         conf,
+		failReqs:     make([]*HttpRequest, 0),
 	}
 	return httpDownloader
 }
@@ -56,12 +62,23 @@ func (hd *httpDownloader) Init() error {
 
 func (hd *httpDownloader) run() {
 	for req := range hd.downloadReqs {
-		resp, err := hd.httpClient.Do(req.Request)
-		if err != nil {
-			continue
-		}
-
-		req.respCh <- newHttpResponse(resp, req)
+		go func(req *HttpRequest) {
+			resp, err := hd.httpClient.Do(req.Request)
+			if err != nil {
+				req.errs = append(req.errs, err)
+				if req.retryTimes < hd.conf.MaxRetry {
+					req.retryTimes += 1
+					_ = hd.DownloadAsync(req)
+				} else {
+					hd.failLock.Lock()
+					hd.failReqs = append(hd.failReqs, req)
+					hd.failLock.Unlock()
+					req.failReqCh <- req
+				}
+				return
+			}
+			req.successRespCh <- newHttpResponse(resp, req)
+		}(req)
 	}
 }
 
